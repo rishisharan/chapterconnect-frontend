@@ -6,7 +6,6 @@ function Dashboard() {
   const [motionText, setMotionText] = useState("");
   const [motions, setMotions] = useState([]);
   const { user, socket, chapterId } = useSelector((state) => state.session);
-  console.log(user.name, user.role, chapterId);
 
   useEffect(() => {
     if (!socket) return;
@@ -44,7 +43,7 @@ function Dashboard() {
   return (
        <div className="min-h-screen flex flex-col items-center p-4 bg-gray-100">
         <header className="w-full text-center py-4 bg-white shadow mb-6">
-          <h1 className="text-3xl font-bold">Leader Dashboard</h1>
+          <h1 className="text-3xl font-bold">Leader Dashboard: {user?.name}</h1>
         </header>
 
         <div className="w-full max-w-md mb-6">
