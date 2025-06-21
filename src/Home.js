@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import Dashboard from "./Dashboard";
+import { useDispatch } from "react-redux";
+import { setSocket, setUser, setChapterId } from "./store/sessionSlice";
+function Home() {
 
-function Home({ setSocket, setUser }) {
-
+  const dispatch = useDispatch();
   const [name, setName] = useState("");
   const navigate = useNavigate();
 
+  
   const handleSubmit = () => {
     if (!name) return alert("Enter your name");
     const role = "Leader";
@@ -14,15 +17,10 @@ function Home({ setSocket, setUser }) {
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: "create_chapter", name, role }));
-      setSocket(ws);
-      setUser({name, role});
-      navigate("/dashboard",{
-        state: {
-          name,
-          role,
-          socket: ws,
-        },
-      });
+      dispatch(setSocket(ws));
+      dispatch(setUser({ name: name, role: role}))
+      dispatch(setChapterId("21343432"));
+      navigate("/dashboard");
     };
 
   };

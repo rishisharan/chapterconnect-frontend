@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 function Dashboard() {
   const [members, setMembers] = useState([]);
   const [motionText, setMotionText] = useState("");
   const [motions, setMotions] = useState([]);
-  const { state } = useLocation();
-  const { name, role, socket } = state || {};
+  const { user, socket, chapterId } = useSelector((state) => state.session);
+  console.log(user.name, user.role, chapterId);
 
   useEffect(() => {
     if (!socket) return;
@@ -21,7 +21,7 @@ function Dashboard() {
 
         if (parsed.type === "new_motion") {
           setMotions((prev) => [...prev, parsed.name]);
-        }
+        } 
       } catch {
         console.log("Message:", msg);
       }
