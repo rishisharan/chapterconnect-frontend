@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 function Dashboard() {
   const [members, setMembers] = useState([]);
   const [motionText, setMotionText] = useState("");
   const [motions, setMotions] = useState([]);
-  const { state } = useLocation();
-  const { name, role, socket } = state || {};
+  const { user, socket, chapterId } = useSelector((state) => state.session);
 
   useEffect(() => {
     if (!socket) return;
@@ -21,7 +20,7 @@ function Dashboard() {
 
         if (parsed.type === "new_motion") {
           setMotions((prev) => [...prev, parsed.name]);
-        }
+        } 
       } catch {
         console.log("Message:", msg);
       }
@@ -44,7 +43,7 @@ function Dashboard() {
   return (
        <div className="min-h-screen flex flex-col items-center p-4 bg-gray-100">
         <header className="w-full text-center py-4 bg-white shadow mb-6">
-          <h1 className="text-3xl font-bold">Leader Dashboard</h1>
+          <h1 className="text-3xl font-bold">Leader Dashboard: {user?.name}</h1>
         </header>
 
         <div className="w-full max-w-md mb-6">
