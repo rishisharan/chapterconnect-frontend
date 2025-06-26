@@ -17,13 +17,25 @@ function Home() {
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: "create_chapter", name, role }));
-      dispatch(setSocket(ws));
-      dispatch(setUser({ name: name, role: role}))
-      dispatch(setChapterId("21343432"));
-      navigate("/dashboard");
+
+    };
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === "chapter_created") {
+        dispatch(setChapterId(msg.chapterId)); // <-- Save it!
+        dispatch(setSocket(ws));
+        dispatch(setUser({ name: name, role: role}))  
+        navigate("/dashboard");
+      }
+
     };
 
   };
+
+  
+
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
