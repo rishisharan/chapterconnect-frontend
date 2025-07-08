@@ -24,7 +24,8 @@ function Home() {
       const msg = JSON.parse(event.data);
 
       if (msg.type === "chapter_created") {
-        dispatch(setChapterId(msg.chapterId)); // <-- Save it!
+
+        dispatch(setChapterId(msg.id));
         dispatch(setSocket(ws));
         dispatch(setUser({ name: name, role: role}))  
         navigate("/dashboard");
