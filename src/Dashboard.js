@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import MotionCard from "./MotionCard";
 
 function Dashboard() {
@@ -7,6 +7,9 @@ function Dashboard() {
   const [motionText, setMotionText] = useState("");
   const [motions, setMotions] = useState([]);
   const { user, socket, chapterId } = useSelector((state) => state.session);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const dispatch = useDispatch();
+
   useEffect(() => {
     if (!socket) return;
 
@@ -40,6 +43,41 @@ function Dashboard() {
     setMotionText("");
   };
 
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      // Close WebSocket connection gracefully
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+
+      // Call logout API
+      const apiUrl = process.env.REACT_APP_API_URL || '';
+      const response = await fetch('http://localhost:8080/api/auth/google/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        // Clear local storage
+        localStorage.removeItem('user');
+        sessionStorage.clear();
+        
+        // Clear Redux state
+        dispatch({ type: 'LOGOUT' });
+        
+        // Redirect to login page
+        window.location.href = '/login';
+      } else {
+        console.error('Logout failed');
+        setLoggingOut(false);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      setLoggingOut(false);
+    }
+  };
+
   const handleShare = async () => {
     try {
       const res = await fetch(`/chapters/${chapterId}/share`, { method: "POST" });
@@ -56,14 +94,18 @@ function Dashboard() {
 
   return (
        <div className="min-h-screen flex flex-col items-center p-4 bg-gray-100">
-        <header className="w-full text-center py-4 bg-white shadow mb-6">
-          <h1 className="text-3xl font-bold">Leader Dashboard: {user?.name}</h1>
-          <button
-            onClick={handleShare}
-            className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 text-sm"
-          >
-             Share Chapter
-          </button>
+        <header className="w-full bg-white shadow-md mb-6">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-800">Leader Dashboard: {user?.name}</h1>
+            
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+                {loggingOut ? 'Logging out...' : 'Logout'}
+            </button>
+          </div>
         </header>
         <div className="w-full max-w-md mb-6">
           <p className="mb-2 text-gray-600">Chapter Members:</p>
