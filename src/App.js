@@ -5,12 +5,13 @@ import Dashboard from "./Dashboard";
 import Home from "./Home";
 import Login from "./pages/Login";
 import AuthCallback from './pages/AuthCallback';
+import CreateMeeting from './pages/CreateMeeting';
+import MeetingRoom from './pages/MeetingRoom';
 
 function App() {
 
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -70,6 +71,9 @@ function App() {
         <Route path="/" element={isAuthenticated ? <Home user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
         <Route path="/dashboard" element={isAuthenticated ? <Dashboard socket={socket} user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
+      
+        <Route path="/create-meeting" element={isAuthenticated ? <CreateMeeting user={user} /> : <Navigate to="/login" />} />
+        <Route path="/meeting/:token" element={isAuthenticated ? <MeetingRoom user={user} /> : <Navigate to="/login" />}  />
       </Routes>
     </Router>
   );
