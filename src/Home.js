@@ -40,7 +40,7 @@ function Home() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-4">ChapterConnect</h1>
+      {/* <h1 className="text-3xl font-bold mb-4">ChapterConnect</h1>
       <input
         className="border p-2 mb-2 rounded"
         placeholder="Enter your name"
@@ -49,7 +49,7 @@ function Home() {
       />
       <button onClick={handleSubmit} className="bg-blue-600 text-white px-4 py-2 rounded">
         Create Chapter
-      </button>
+      </button> */}
     </div>
   );
 }

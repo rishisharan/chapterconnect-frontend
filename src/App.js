@@ -20,10 +20,9 @@ function App() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch('http://localhost:8080/api/auth/me', {
         credentials: 'include'
       });
-
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
@@ -43,7 +42,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', {
+      await fetch('http://localhost:8080/api/auth/google/logout', {
         method: 'POST',
         credentials: 'include'
       });
