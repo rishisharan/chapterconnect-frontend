@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import MotionCard from "./MotionCard";
+import { useNavigate } from "react-router-dom";
 
 function Dashboard({ user, socket, onLogout }) {
   const [members, setMembers] = useState([]);
@@ -11,6 +12,7 @@ function Dashboard({ user, socket, onLogout }) {
   // Use socket from props or Redux
   const activeSocket = socket || reduxSocket;
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   useEffect(() => {
     if (!activeSocket) return;
 
@@ -114,7 +116,12 @@ function Dashboard({ user, socket, onLogout }) {
           </button>
         </div>
       </header>
-
+      <button
+        onClick={() => navigate('/create-meeting')}
+        className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+      >
+        Create New Meeting
+      </button>
       <div className="w-full max-w-md mb-6">
         <p className="mb-2 text-gray-600">Chapter Members:</p>
         <ul className="bg-white rounded shadow p-4">
