@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import AuthCallback from './pages/AuthCallback';
 import CreateMeeting from './pages/CreateMeeting';
 import MeetingRoom from './pages/MeetingRoom';
+import WebSocketTest from './pages/WebSocketTest';
 
 function App() {
 
@@ -71,7 +72,7 @@ function App() {
         <Route path="/" element={isAuthenticated ? <Home user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
         <Route path="/dashboard" element={isAuthenticated ? <Dashboard socket={socket} user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
-      
+        <Route path="/test/websocket" element={<WebSocketTest />} />
         <Route path="/create-meeting" element={isAuthenticated ? <CreateMeeting user={user} /> : <Navigate to="/login" />} />
         <Route path="/meeting/:token" element={isAuthenticated ? <MeetingRoom user={user} /> : <Navigate to="/login" />}  />
       </Routes>
