@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Dashboard from "./Dashboard";
 import Home from "./Home";
 import Login from "./pages/Login";
-import AuthCallback from './pages/AuthCallback';
+import ProtectedRoute from './hooks/ProtectedRoute';
 import CreateMeeting from './pages/CreateMeeting';
 import MeetingRoom from './pages/MeetingRoom';
 import WebSocketTest from './pages/WebSocketTest';
@@ -22,8 +22,12 @@ function App() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/auth/me', {
-        credentials: 'include'
+      const token = localStorage.getItem('jwt');
+      const response = await fetch('http://localhost:8080/api/me', {
+          headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
       if (response.ok) {
         const userData = await response.json();
@@ -68,9 +72,16 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
-        <Route path="/auth/callback" element={<AuthCallback onLogin={handleLogin} />} />
         <Route path="/" element={isAuthenticated ? <Home user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-        <Route path="/dashboard" element={isAuthenticated ? <Dashboard socket={socket} user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard socket={socket} user={user} onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
         <Route path="/test/websocket" element={<WebSocketTest />} />
         <Route path="/create-meeting" element={isAuthenticated ? <CreateMeeting user={user} /> : <Navigate to="/login" />} />

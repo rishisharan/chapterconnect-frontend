@@ -1,47 +1,51 @@
-// FILE: src/components/WebSocketTest.js
-// Fixed version with proper meeting join flow
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Wifi, WifiOff, Send, Trash2, Play, Square, RefreshCw, LogIn } from 'lucide-react';
-
+import useWebSocket from '../hooks/useWebSocket';
 function WebSocketTest() {
   const [wsUrl, setWsUrl] = useState('ws://localhost:8080/ws');
   const [meetingId, setMeetingId] = useState('');
-  const [meetingToken, setMeetingToken] = useState(''); // Token from URL
-  const [token, setToken] = useState('test-token');
-  const [userName, setUserName] = useState('Test User');
+  const [meetingToken, setMeetingToken] = useState('');
   
-  const [isConnected, setIsConnected] = useState(false);
-  const [isJoined, setIsJoined] = useState(false); // NEW: Track if joined meeting
-  const [messages, setMessages] = useState([]);
+  // NEW: Guest identity
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  
+
+  const [isJoined, setIsJoined] = useState(false);
+  const [messsages, setMesssages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
   const [meetingStatus, setMeetingStatus] = useState(null);
-  const [meetingInfo, setMeetingInfo] = useState(null); // NEW: Store meeting details
+  const [meetingInfo, setMeetingInfo] = useState(null);
+  const { isConnected, messages, connect, disconnect, sendMessage } = useWebSocket();
+
   
   const ws = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const addMessage = (type, text) => {
     const time = new Date().toLocaleTimeString();
-    setMessages(prev => [...prev, { type, text, time, id: Date.now() }]);
+    setMesssages(prev => [...prev, { type, text, time, id: Date.now() }]);
   };
 
-  // NEW: Join meeting through API
+  // Modified: Join meeting with guest names
   const joinMeeting = async () => {
     if (!meetingToken.trim()) {
       addMessage('error', 'Please enter a meeting token');
       return;
     }
 
+    if (!firstName.trim() || !lastName.trim()) {
+      addMessage('error', 'Please enter your first and last name');
+      return;
+    }
+
     try {
-      addMessage('info', `Joining meeting with token: ${meetingToken}...`);
+      addMessage('info', `${firstName} ${lastName} joining meeting...`);
       
-      // First, get meeting info
       const getMeetingResponse = await fetch(`http://localhost:8080/api/meetings/${meetingToken}`, {
         credentials: 'include',
       });
@@ -52,23 +56,35 @@ function WebSocketTest() {
 
       const meetingData = await getMeetingResponse.json();
       setMeetingInfo(meetingData);
-      setMeetingId(meetingData.id); // Set the actual meeting ID
+      setMeetingId(meetingData.id);
       
       addMessage('success', `Found meeting: ${meetingData.title}`);
 
-      // Now join the meeting
+      // Join with guest info
       const joinResponse = await fetch(`http://localhost:8080/api/meetings/${meetingToken}/join`, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim()
+        })
       });
 
       if (!joinResponse.ok) {
-        throw new Error('Failed to join meeting');
+        const errorText = await joinResponse.text();
+        throw new Error(errorText || 'Failed to join meeting');
       }
 
       const joinData = await joinResponse.json();
-      addMessage('success', `✅ Successfully joined meeting!`);
+      addMessage('success', `✅ ${firstName} ${lastName} joined successfullyy!`);
       setIsJoined(true);
+
+      // Auto-connect WebSocket after joining
+      addMessage('info', 'Connecting to WebSocket...');
+      setTimeout(() => connectWebSocket(true), 500);
 
     } catch (error) {
       addMessage('error', `Failed to join meeting: ${error.message}`);
@@ -76,8 +92,15 @@ function WebSocketTest() {
     }
   };
 
-  const connectWebSocket = () => {
-    if (!isJoined) {
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  };
+
+  const connectWebSocket = (force = false) => {
+    if (!force && !isJoined) {
       addMessage('error', 'Please join the meeting first!');
       return;
     }
@@ -91,28 +114,26 @@ function WebSocketTest() {
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
-      addMessage('success', 'WebSocket connected! Sending auth...');
+    addMessage('success', 'WebSocket connected! Sending auth...');
       
-      // Get real auth token from cookie
-      const authToken = getAuthToken();
+    const authToken = getAuthToken();
       
-      // Send AUTH message with actual meeting ID
-      ws.current.send(JSON.stringify({
-        type: 'AUTH',
-        payload: {
-          token: authToken || token,
-          meetingId: meetingId // Use actual meeting ID from join
-        },
-        timestamp: new Date().toISOString()
-      }));
-    };
+    connect({
+      meetingId: meetingId,
+      firstName,
+      lastName,
+      token: getCookie('auth_token')
+    });
+  };
 
     ws.current.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        console.log('Received message:', message);
         handleMessage(message);
       } catch (error) {
         addMessage('error', `Failed to parse: ${event.data}`);
+        console.error('Parse error:', error);
       }
     };
 
@@ -121,10 +142,6 @@ function WebSocketTest() {
       console.error('WebSocket error:', error);
     };
 
-    ws.current.onclose = (event) => {
-      addMessage('system', `Connection closed (Code: ${event.code})`);
-      setIsConnected(false);
-    };
   };
 
   const handleMessage = (message) => {
@@ -132,8 +149,8 @@ function WebSocketTest() {
 
     switch (message.type) {
       case 'CONNECTED':
-        setIsConnected(true);
-        addMessage('success', '✅ WebSocket authenticated!');
+  
+        addMessage('success', `✅ Authenticated as ${firstName} ${lastName}`);
         break;
 
       case 'ERROR':
@@ -163,7 +180,7 @@ function WebSocketTest() {
 
       case 'MEETING_ENDED':
         addMessage('warning', '🛑 Meeting has ended');
-        setIsConnected(false);
+        // setIsConnected(false);
         setIsJoined(false);
         break;
 
@@ -184,7 +201,7 @@ function WebSocketTest() {
     }
   };
 
-  const sendMessage = (type, payload) => {
+  const sendMesssage = (type, payload) => {
     if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
       addMessage('error', 'Not connected!');
       return;
@@ -201,30 +218,19 @@ function WebSocketTest() {
 
   const sendTestMessage = () => {
     if (messageInput.trim()) {
-      sendMessage('MESSAGE', { text: messageInput });
+      sendMesssage('MESSAGE', { 
+        text: messageInput,
+        from: `${firstName} ${lastName}`
+      });
       setMessageInput('');
     }
   };
 
   const sendPing = () => {
-    sendMessage('PING', {});
+    sendMesssage('PING', {});
   };
 
-  const startMeeting = async () => {
-    if (!meetingId) {
-      addMessage('error', 'Please join a meeting first');
-      return;
-    }
-
-    try {
-      const response = await fetch(`http://localhost:8080/test/start-meeting?id=${meetingId}`);
-      const data = await response.json();
-      addMessage('success', `✅ Meeting started (WebSocket enabled)`);
-      checkMeetingStatus();
-    } catch (error) {
-      addMessage('error', `Failed to start meeting: ${error.message}`);
-    }
-  };
+  // Removed startMeeting - guests auto-connect after joining
 
   const endMeeting = async () => {
     if (!meetingId) {
@@ -268,7 +274,7 @@ function WebSocketTest() {
   };
 
   const clearMessages = () => {
-    setMessages([]);
+    setMesssages([]);
   };
 
   const getMessageClass = (type) => {
@@ -295,30 +301,26 @@ function WebSocketTest() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-8">
-          {/* Header */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               🔌 WebSocket Test Console
             </h1>
             <p className="text-gray-600">
-              Test your WebSocket connection with real meeting authentication
+              Join as a guest with your name and test WebSocket connection
             </p>
           </div>
 
-          {/* Instructions */}
           <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
-            <h3 className="font-bold text-blue-900 mb-2">📋 Updated Flow:</h3>
+            <h3 className="font-bold text-blue-900 mb-2">📋 Guest Join Flow:</h3>
             <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
-              <li>Login to your app first (so you have auth cookies)</li>
-              <li>Create a meeting in your dashboard and copy the token</li>
-              <li>Paste the meeting token below and click "Join Meeting"</li>
-              <li>Click "Start Meeting" to enable WebSocket</li>
-              <li>Click "Connect" to establish WebSocket connection</li>
-              <li>Open this page in another tab to test multiple users</li>
+              <li>Enter your first name and last name</li>
+              <li>Paste the meeting token (from the shared link)</li>
+              <li>Click "Join Meeting" - WebSocket connects automatically!</li>
+              <li>Start chatting with other participants once connected</li>
+              <li>Open in another tab with a different name to simulate multiple users</li>
             </ol>
           </div>
 
-          {/* Status Bar */}
           <div className={`flex items-center justify-between p-4 rounded-lg mb-6 ${
             isConnected ? 'bg-green-100' : isJoined ? 'bg-yellow-100' : 'bg-red-100'
           }`}>
@@ -330,7 +332,7 @@ function WebSocketTest() {
               )}
               <div>
                 <p className="font-bold text-gray-900">
-                  {isConnected ? '🟢 Connected' : isJoined ? '🟡 Joined (not connected)' : '⚫ Not Joined'}
+                  {isConnected ? `🟢 Connected as ${firstName} ${lastName}` : isJoined ? '🟡 Joined (connecting...)' : '⚫ Not Joined'}
                 </p>
                 {meetingInfo && (
                   <p className="text-sm text-gray-600">
@@ -355,26 +357,54 @@ function WebSocketTest() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Controls */}
             <div className="lg:col-span-1 space-y-6">
-              {/* Step 1: Join Meeting */}
+              {/* Step 1: Guest Information & Join */}
               <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-4">
-                <h3 className="font-bold text-gray-900 mb-3">Step 1: Join Meeting</h3>
+                <h3 className="font-bold text-gray-900 mb-3">Step 1: Join as Guest</h3>
                 
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Meeting Token (from URL):
+                      First Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      disabled={isJoined}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100"
+                      placeholder="John"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      disabled={isJoined}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100"
+                      placeholder="Doe"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Meeting Token *
                     </label>
                     <input
                       type="text"
                       value={meetingToken}
                       onChange={(e) => setMeetingToken(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-mono"
+                      disabled={isJoined}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-mono disabled:bg-gray-100"
                       placeholder="abc123xyz..."
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Get this from your meeting URL: /meeting/<strong>token</strong>
+                      Get this from your meeting URL
                     </p>
                   </div>
 
@@ -393,70 +423,28 @@ function WebSocketTest() {
                 </div>
               </div>
 
-              {/* Step 2: Start WebSocket */}
+              {/* Connection Status */}
               <div className={`border-2 rounded-lg p-4 ${
-                isJoined ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-100 border-gray-300'
+                isConnected ? 'bg-green-50 border-green-300' : isJoined ? 'bg-blue-50 border-blue-300' : 'bg-gray-100 border-gray-300'
               }`}>
-                <h3 className="font-bold text-gray-900 mb-3">Step 2: Enable WebSocket</h3>
-                <button
-                  onClick={startMeeting}
-                  disabled={!isJoined}
-                  className={`w-full px-4 py-2 rounded flex items-center justify-center gap-2 ${
-                    isJoined
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  <Play className="w-4 h-4" />
-                  Start Meeting (Enable WS)
-                </button>
-              </div>
-
-              {/* Step 3: Connect */}
-              <div className={`border-2 rounded-lg p-4 ${
-                isJoined ? 'bg-blue-50 border-blue-300' : 'bg-gray-100 border-gray-300'
-              }`}>
-                <h3 className="font-bold text-gray-900 mb-3">Step 3: Connect WebSocket</h3>
-                
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      WebSocket URL:
-                    </label>
-                    <input
-                      type="text"
-                      value={wsUrl}
-                      onChange={(e) => setWsUrl(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <button
-                      onClick={connectWebSocket}
-                      disabled={isConnected || !isJoined}
-                      className={`w-full py-2 rounded font-medium ${
-                        isConnected
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : !isJoined
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
-                    >
-                      🔗 Connect
-                    </button>
-                    <button
-                      onClick={disconnectWebSocket}
-                      disabled={!isConnected}
-                      className={`w-full py-2 rounded font-medium ${
-                        !isConnected
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-red-600 text-white hover:bg-red-700'
-                      }`}
-                    >
-                      ❌ Disconnect
-                    </button>
-                  </div>
+                <h3 className="font-bold text-gray-900 mb-3">Step 2: Connection Status</h3>
+                <div className="text-center py-2">
+                  {isConnected ? (
+                    <div className="text-green-700">
+                      <Wifi className="w-8 h-8 mx-auto mb-2" />
+                      <p className="font-semibold">✅ Connected!</p>
+                    </div>
+                  ) : isJoined ? (
+                    <div className="text-blue-700">
+                      <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                      <p className="font-semibold">Connecting...</p>
+                    </div>
+                  ) : (
+                    <div className="text-gray-500">
+                      <WifiOff className="w-8 h-8 mx-auto mb-2" />
+                      <p className="font-semibold">Not Connected</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -476,7 +464,7 @@ function WebSocketTest() {
                     🏓 Send Ping
                   </button>
                   <button
-                    onClick={() => sendMessage('REQUEST_RECOGNITION', {})}
+                    onClick={() => sendMesssage('REQUEST_RECOGNITION', {})}
                     disabled={!isConnected}
                     className={`w-full px-4 py-2 rounded text-sm ${
                       isConnected
@@ -489,20 +477,20 @@ function WebSocketTest() {
                 </div>
               </div>
 
-              {/* End Meeting */}
+              {/* Disconnect/Leave */}
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 className="font-bold text-gray-900 mb-3">End Meeting</h3>
+                <h3 className="font-bold text-gray-900 mb-3">Leave Meeting</h3>
                 <button
-                  onClick={endMeeting}
-                  disabled={!isJoined}
+                  onClick={disconnectWebSocket}
+                  disabled={!isConnected}
                   className={`w-full px-4 py-2 rounded flex items-center justify-center gap-2 ${
-                    isJoined
+                    isConnected
                       ? 'bg-red-600 text-white hover:bg-red-700'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
                   <Square className="w-4 h-4" />
-                  End Meeting
+                  Leave Meeting
                 </button>
               </div>
             </div>
@@ -524,7 +512,7 @@ function WebSocketTest() {
                 <div className="bg-white border border-gray-200 rounded-lg p-4 h-[600px] overflow-y-auto">
                   {messages.length === 0 ? (
                     <p className="text-gray-400 text-center py-8">
-                      No messages yet. Follow the steps to connect!
+                      No messages yet. Enter your name and join the meeting!
                     </p>
                   ) : (
                     messages.map((msg) => (
@@ -539,10 +527,9 @@ function WebSocketTest() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Send Message */}
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Send Test Message:
+                    Send Message:
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -551,7 +538,7 @@ function WebSocketTest() {
                       onChange={(e) => setMessageInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendTestMessage()}
                       disabled={!isConnected}
-                      placeholder={isConnected ? "Type a message..." : "Connect first..."}
+                      placeholder={isConnected ? "Type a message..." : "Join meeting first..."}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-200"
                     />
                     <button

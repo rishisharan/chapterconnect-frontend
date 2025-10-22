@@ -15,10 +15,12 @@ function CreateMeeting({ user }) {
 
     setLoading(true);
     try {
-      const response = await fetch('api/meetings', {
+      const token = localStorage.getItem('jwt');
+      const response = await fetch('http://localhost:8080/api/meetings', {
         method: 'POST',
         credentials: 'include',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ title: title.trim() }),
