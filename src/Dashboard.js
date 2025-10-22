@@ -4,52 +4,23 @@ import { useNavigate } from "react-router-dom";
 
 function Dashboard({ user, socket }) {
 
-  const [loggingOut, setLoggingOut] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    setLoggingOut(true);
     try {
-      // Close WebSocket connection gracefully
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.close();
-      }
-
-      // Call logout API
-      const response = await fetch('http://localhost:8080/api/auth/google/logout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      await fetch("http://localhost:8080/api/auth/google/logout", {
+        method: "POST",
       });
-      
-      console.log('Logout response status:', response.status);
-      console.log('Logout response ok:', response.ok);
-      
-      if (response.ok) {
-        // Clear local storage
-        localStorage.removeItem('user');
-        sessionStorage.clear();
-        
-        // Clear Redux state
-        dispatch({ type: 'LOGOUT' });
-        
-        // Redirect to login page
-        window.location.href = '/login';
-      } else {
-        const errorData = await response.json();
-        console.error('Logout failed:', errorData);
-        alert('Logout failed. Please try again.');
-        setLoggingOut(false);
-      }
     } catch (error) {
-      console.error('Logout error:', error);
-      alert('Logout error: ' + error.message);
-      setLoggingOut(false);
+      console.error("Logout failed:", error);
+    } finally {
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("user");
+      window.location.href = "/login"; // redirect to login
     }
   };
+
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 bg-gray-100">

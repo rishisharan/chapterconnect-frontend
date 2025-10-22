@@ -5,13 +5,32 @@ function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
 
   const handleGoogleLogin = async () => {
-    setLoading(true);
+     setLoading(true);
     try {
+      // Get Google OAuth URL from backend
       const response = await fetch('/api/auth/google/login');
       const data = await response.json();
-      
       if (data.login_url) {
-        window.location.href = data.login_url;
+        // Open Google login in a popup window
+        const popup = window.open(data.login_url, 'googleLogin', 'width=500,height=600');
+
+        // Listen for message from popup
+        window.addEventListener('message', (event) => {
+          if (event.data.type === 'auth-success') {
+            const { token, user } = event.data;
+
+            // ✅ Save JWT and user info
+            localStorage.setItem('jwt', token);
+            localStorage.setItem('user', JSON.stringify(user));
+
+            onLogin(user); // update parent state
+            popup.close();
+            setLoading(false);
+
+            // ✅ Redirect to dashboard
+            window.location.href = '/dashboard';
+          }
+        });
       }
     } catch (error) {
       console.error('Login failed:', error);

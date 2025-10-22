@@ -7,7 +7,7 @@ import {
 import useWebSocket from '../hooks/useWebSocket';
 
 function MeetingRoom({ user }) {
-  const { token } = useParams();
+  const { token: meetingToken } = useParams(); 
   const navigate = useNavigate();
   const [meeting, setMeeting] = useState(null);
   const [participants, setParticipants] = useState([]);
@@ -48,35 +48,44 @@ function MeetingRoom({ user }) {
         ws.current.close();
       }
     };
-  }, [token]);
+  }, [meetingToken]);
 
-  const joinMeeting = async () => {
+    const joinMeeting = async () => {
     try {
-      const meetingResponse = await fetch(`http://localhost:8080/api/meetings/${token}`, {
+      const jwtToken = localStorage.getItem('jwt');  // ✅ Rename to jwtToken
+      
+      // Fetch meeting by meetingToken
+      const meetingResponse = await fetch(`http://localhost:8080/api/meetings/${meetingToken}`, {  // ✅ Use meetingToken
         credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,  // ✅ Use jwtToken for auth
+          'Content-Type': 'application/json',
+        },
       });
-
+      
       if (!meetingResponse.ok) {
         throw new Error('Meeting not found');
       }
 
       const meetingData = await meetingResponse.json();
       setMeeting(meetingData);
-      
-      setIsChairman(meetingData.created_by === user?.id);
       setMeetingActive(meetingData.status === 'active');
 
-      const joinResponse = await fetch(`http://localhost:8080/api/meetings/${token}/join`, {
+      const requestBody = {
+        firstName: user?.name?.split(' ')[0] || 'Guest',
+        lastName: user?.name?.split(' ').slice(1).join(' ') || 'User'
+      };
+
+      // Join meeting by meetingToken
+      const joinResponse = await fetch(`http://localhost:8080/api/meetings/${meetingToken}/join`, {  // ✅ Use meetingToken
         method: 'POST',
         credentials: 'include',
         headers: {
+          'Authorization': `Bearer ${jwtToken}`,  // ✅ Add auth header
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          firstName:  user?.name,
-          lastName: user?.name
-        })
-      });
+        body: JSON.stringify(requestBody)
+      })
 
       if (!joinResponse.ok) {
         throw new Error('Failed to join meeting');
@@ -95,6 +104,7 @@ function MeetingRoom({ user }) {
     }
   };
 
+  
   const connectWebSocket = (meetingId) => {
     connect({
       meetingId: meetingId,
@@ -138,8 +148,13 @@ function MeetingRoom({ user }) {
 
   const fetchParticipants = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/meetings/${token}/participants`, {
+      const jwtToken = localStorage.getItem('jwt');  // ✅ Get JWT token
+      const response = await fetch(`http://localhost:8080/api/meetings/${meetingToken}/participants`, {  // ✅ Use meetingToken
         credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,  // ✅ Add auth
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -153,9 +168,14 @@ function MeetingRoom({ user }) {
 
   const startMeeting = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/meetings/${token}/start`, {
+      const jwtToken = localStorage.getItem('jwt');  // ✅ Get JWT token
+      const response = await fetch(`http://localhost:8080/api/meetings/${meetingToken}/start`, {  // ✅ Use meetingToken
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) {
@@ -182,9 +202,14 @@ function MeetingRoom({ user }) {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/meetings/${token}/end`, {
+      const jwtToken = localStorage.getItem('jwt');  // ✅ Get JWT token
+      const response = await fetch(`http://localhost:8080/api/meetings/${meetingToken}/end`, {  // ✅ Use meetingToken
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) {
@@ -201,7 +226,7 @@ function MeetingRoom({ user }) {
   };
 
   const copyShareLink = () => {
-    const shareUrl = `${window.location.origin}/meeting/${token}`;
+    const shareUrl = `${window.location.origin}/meeting/${meetingToken}`;  // ✅ Use meetingToken
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -213,9 +238,14 @@ function MeetingRoom({ user }) {
     }
 
     try {
-      await fetch(`http://localhost:8080/api/meetings/${token}/leave`, {
+      const jwtToken = localStorage.getItem('jwt');  // ✅ Get JWT token
+      await fetch(`http://localhost:8080/api/meetings/${meetingToken}/leave`, {  // ✅ Use meetingToken
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
       });
     } catch (err) {
       console.error('Failed to leave meeting:', err);
