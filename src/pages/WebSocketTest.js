@@ -61,7 +61,7 @@ function WebSocketTest() {
       addMessage('success', `Found meeting: ${meetingData.title}`);
 
       // Join with guest info
-      const joinResponse = await fetch(`http://localhost:8080/api/meetings/${meetingToken}/join`, {
+      const joinResponse = await fetch(`http://localhost:8080/api/meetings/${meetingToken}/register_guest`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -92,12 +92,6 @@ function WebSocketTest() {
     }
   };
 
-  const getCookie = (name) => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return '';
-  };
 
   const connectWebSocket = (force = false) => {
     if (!force && !isJoined) {
@@ -111,7 +105,9 @@ function WebSocketTest() {
     }
 
     addMessage('system', `Connecting to ${wsUrl}...`);
-    ws.current = new WebSocket(wsUrl);
+
+    const wsUrlWithToken = `${wsUrl}?meetingId=${meetingId}`;
+    ws.current = new WebSocket(wsUrlWithToken);
 
     ws.current.onopen = () => {
     addMessage('success', 'WebSocket connected! Sending auth...');
@@ -119,10 +115,10 @@ function WebSocketTest() {
     const authToken = getAuthToken();
       
     connect({
-      meetingId: meetingId,
+      meetingId: meetingToken,
       firstName,
       lastName,
-      token: getCookie('auth_token')
+      token: meetingToken
     });
   };
 

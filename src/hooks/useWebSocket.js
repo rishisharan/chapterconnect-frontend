@@ -15,9 +15,18 @@ const useWebSocket = (url = 'ws://localhost:8080/ws') => {
       return;
     }
 
-    console.log('[WS] Connecting to:', url);
+    const token = config?.token || localStorage.getItem('jwt');
+    if (!token) {
+      console.error('[WS] Missing JWT token, cannot connect');
+      return;
+    }
+
+    // Attach token as query parameter
+    const wsUrl = `${url}?meeting_id=${encodeURIComponent(config.meetingId)}&token=${encodeURIComponent(token)}`;
+
+    console.log('[WS] Connecting to:', wsUrl);
     setConnectionConfig(config);
-    ws.current = new WebSocket(url);
+    ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
       console.log('[WS] Connected successfully');
