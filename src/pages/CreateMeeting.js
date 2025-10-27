@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Video, Copy, Check } from 'lucide-react';
+import { setCurrentMeeting } from '../store/meetingSlice';
+import { useDispatch } from 'react-redux';
 
 function CreateMeeting({ user }) {
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [createdMeeting, setCreatedMeeting] = useState(null);
   const [copied, setCopied] = useState(false);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleCreateMeeting = async (e) => {
@@ -29,6 +32,10 @@ function CreateMeeting({ user }) {
       if (response.ok) {
         const meeting = await response.json();
         setCreatedMeeting(meeting);
+        dispatch(setCurrentMeeting({
+          meeting: meeting,
+          isHost: true  
+        }));
       } else {
         alert('Failed to create meeting');
       }
