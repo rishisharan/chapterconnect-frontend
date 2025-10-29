@@ -48,14 +48,14 @@ function CreateMeeting({ user }) {
   };
 
   const copyShareLink = () => {
-    const shareUrl = `${window.location.origin}/meeting/${createdMeeting.token}`;
+    const shareUrl = `${window.location.origin}/meeting/${createdMeeting.id}`;
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const joinMeeting = () => {
-    navigate(`/meeting/${createdMeeting.token}`);
+    navigate(`/meeting/${createdMeeting.id}/${createdMeeting.token}`);
   };
 
   if (createdMeeting) {

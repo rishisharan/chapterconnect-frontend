@@ -7,7 +7,7 @@ import {
 import useWebSocket from '../hooks/useWebSocket';
 
 function MeetingRoom({ user }) {
-  const { token: meetingToken } = useParams(); 
+  const { id:id, token: meetingToken } = useParams(); 
   const navigate = useNavigate();
   const [meeting, setMeeting] = useState(null);
   const [participants, setParticipants] = useState([]);
@@ -115,38 +115,7 @@ function MeetingRoom({ user }) {
       token: jwtToken
     });
   };
-
-  const handleWebSocketMessage = (message) => {
-    switch (message.type) {
-      case 'CONNECTED':
-        console.log('WebSocket authenticated');
-        setWsConnected(true);
-        break;
-
-      case 'USER_JOINED':
-        console.log('User joined:', message.payload);
-        fetchParticipants();
-        break;
-
-      case 'USER_LEFT':
-        console.log('User left:', message.payload);
-        fetchParticipants();
-        break;
-
-      case 'MEETING_ENDED':
-        alert('The meeting has been ended by the chairman');
-        navigate('/dashboard');
-        break;
-
-      case 'ERROR':
-        const errorPayload = JSON.parse(message.payload || '{}');
-        console.error('WebSocket error:', errorPayload.error);
-        break;
-
-      default:
-        console.log('Unknown message type:', message.type);
-    }
-  };
+  
 
   const fetchParticipants = async () => {
     try {
@@ -161,7 +130,7 @@ function MeetingRoom({ user }) {
 
       if (response.ok) {
         const data = await response.json();
-        setParticipants(data || []);
+        setParticipants(data.participants || []);
       }
     } catch (err) {
       console.error('Failed to fetch participants:', err);
@@ -270,12 +239,6 @@ function MeetingRoom({ user }) {
     setMessage('');
   };
 
-  const getCookie = (name) => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return '';
-  };
 
   const getInitials = (name) => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
@@ -398,16 +361,16 @@ function MeetingRoom({ user }) {
               <div className="flex items-center gap-2 ml-2 flex-wrap">
                 {participants.slice(0, 8).map((participant) => (
                   <div
-                    key={participant.user_id}
+                    key={participant.userId}
                     className="relative group"
-                    title={participant.user_name}
+                    title={participant.userName}
                   >
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white ${
                       participant.user_id === meeting?.created_by ? 'bg-yellow-500 ring-2 ring-yellow-300' : 'bg-blue-500'
                     }`}>
-                      {getInitials(participant.user_name)}
+                      {getInitials(participant.UserName)}
                     </div>
-                    {participant.user_id === user?.id && (
+                    {participant.userId === user?.id && (
                       <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                     )}
                   </div>
@@ -634,21 +597,21 @@ function MeetingRoom({ user }) {
               <div className="space-y-2">
                 <h3 className="text-sm font-bold text-gray-900 mb-3">👥 PARTICIPANTS</h3>
                 {participants.map((participant) => (
-                  <div key={participant.user_id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div key={participant.userId} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white ${
-                        participant.user_id === meeting?.created_by ? 'bg-yellow-500' : 'bg-blue-500'
+                        participant.userId === meeting?.created_by ? 'bg-yellow-500' : 'bg-blue-500'
                       }`}>
-                        {getInitials(participant.user_name)}
+                        {getInitials(participant.userName)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
-                          {participant.user_name}
-                          {participant.user_id === user?.id && (
+                          {participant.userName}
+                          {participant.userId === user?.id && (
                             <span className="text-blue-600 text-xs ml-2">(You)</span>
                           )}
                         </p>
-                        {participant.user_id === meeting?.created_by && (
+                        {participant.userId === meeting?.created_by && (
                           <span className="text-xs text-yellow-600">👑 Chairman</span>
                         )}
                         <p className="text-xs text-gray-500">
