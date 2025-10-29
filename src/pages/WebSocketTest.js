@@ -100,9 +100,17 @@ function WebSocketTest() {
     }
 
     addMessage('system', `Connecting to ${wsUrl}...`);
- 
+
+    const wsUrlWithToken = `${wsUrl}?meetingId=${meetingId}`;
+    ws.current = new WebSocket(wsUrlWithToken);
+
+    ws.current.onopen = () => {
+    addMessage('success', 'WebSocket connected! Sending auth...');
+      
+    const authToken = getAuthToken();
+      
     connect({
-      meetingId: meetingId,
+      meetingId: meetingToken,
       firstName,
       lastName,
       token: meetingToken

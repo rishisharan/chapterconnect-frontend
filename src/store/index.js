@@ -1,8 +1,8 @@
 import { configureStore } from "@reduxjs/toolkit";
-import sessionReducer from "./sessionSlice";
+import meetingReducer from "./meetingSlice";
 
 export const store = configureStore({
   reducer: {
-    session: sessionReducer,
+    meeting: meetingReducer,
   },
 });

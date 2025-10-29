@@ -35,9 +35,11 @@ function MeetingRoom({ user }) {
     { id: 1, title: 'Call to Order', status: 'active', duration: '5 min' },
     { id: 2, title: 'Reading of Minutes', status: 'pending', duration: '10 min' },
     { id: 3, title: 'Q4 Budget Approval', status: 'pending', duration: '30 min' },
-    { id: 4, title: 'New Business', status: 'pending', duration: '20 min' },
+    { id: 4, title: 'Motion and Voting', status: 'pending', duration: '30 min' },
     { id: 5, title: 'Committee Reports', status: 'pending', duration: '15 min' },
-    { id: 6, title: 'Adjournment', status: 'pending', duration: '' },
+    { id: 6, title: 'New Business', status: 'pending', duration: '20 min' },
+    { id: 7, title: 'Adjournment', status: 'pending', duration: '' },
+    { id: 8, title: 'Post-Meeting', status: 'pending', duration: '' },
   ]);
 
   useEffect(() => {
@@ -94,7 +96,7 @@ function MeetingRoom({ user }) {
       await fetchParticipants();
       
       if (meetingData.status === 'active') {
-        connectWebSocket(meetingData.id, meetingData.token);
+        connectWebSocket(meetingData.id, jwtToken);
       }
       
     } catch (err) {
@@ -105,12 +107,12 @@ function MeetingRoom({ user }) {
   };
 
   
-  const connectWebSocket = (meetingId, token) => {
+  const connectWebSocket = (meetingId, jwtToken) => {
     connect({
       meetingId: meetingId,
       user,
       user,
-      token: token
+      token: jwtToken
     });
   };
   
@@ -156,7 +158,7 @@ function MeetingRoom({ user }) {
       console.log('Meeting started:', data);
       
       setMeetingActive(true);
-      connectWebSocket(meeting.id);
+      connectWebSocket(meeting.id, jwtToken);
       
       alert('Meeting started! WebSocket enabled.');
     } catch (error) {
