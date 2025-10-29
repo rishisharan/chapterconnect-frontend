@@ -85,7 +85,7 @@ function App() {
         <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
         <Route path="/test/websocket" element={<WebSocketTest />} />
         <Route path="/create-meeting" element={isAuthenticated ? <CreateMeeting user={user} /> : <Navigate to="/login" />} />
-        <Route path="/meeting/:token" element={isAuthenticated ? <MeetingRoom user={user} /> : <Navigate to="/login" />}  />
+        <Route path="/meeting/:id/:token" element={isAuthenticated ? <MeetingRoom user={user} /> : <Navigate to="/login" />}  />
       </Routes>
     </Router>
   );

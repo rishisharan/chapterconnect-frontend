@@ -5,7 +5,6 @@ function WebSocketTest() {
   const [wsUrl, setWsUrl] = useState('ws://localhost:8080/ws');
   const [meetingId, setMeetingId] = useState('');
   const [meetingToken, setMeetingToken] = useState('');
-  
   // NEW: Guest identity
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -61,7 +60,7 @@ function WebSocketTest() {
       addMessage('success', `Found meeting: ${meetingData.title}`);
 
       // Join with guest info
-      const joinResponse = await fetch(`http://localhost:8080/api/meetings/${meetingToken}/join`, {
+      const joinResponse = await fetch(`http://localhost:8080/api/meetings/${meetingToken}/register_guest`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -81,10 +80,9 @@ function WebSocketTest() {
       const joinData = await joinResponse.json();
       addMessage('success', `✅ ${firstName} ${lastName} joined successfullyy!`);
       setIsJoined(true);
-
       // Auto-connect WebSocket after joining
       addMessage('info', 'Connecting to WebSocket...');
-      setTimeout(() => connectWebSocket(true), 500);
+      setTimeout(() => connectWebSocket(meetingData.id, meetingData.token), 500);
 
     } catch (error) {
       addMessage('error', `Failed to join meeting: ${error.message}`);
@@ -92,106 +90,26 @@ function WebSocketTest() {
     }
   };
 
-  const getCookie = (name) => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return '';
-  };
 
-  const connectWebSocket = (force = false) => {
-    if (!force && !isJoined) {
-      addMessage('error', 'Please join the meeting first!');
-      return;
-    }
 
+  const connectWebSocket = (meetingId, token) => {
+  
     if (ws.current?.readyState === WebSocket.OPEN) {
       addMessage('warning', 'Already connected');
       return;
     }
 
     addMessage('system', `Connecting to ${wsUrl}...`);
-    ws.current = new WebSocket(wsUrl);
-
-    ws.current.onopen = () => {
-    addMessage('success', 'WebSocket connected! Sending auth...');
-      
-    const authToken = getAuthToken();
-      
+ 
     connect({
       meetingId: meetingId,
       firstName,
       lastName,
-      token: getCookie('auth_token')
+      token: meetingToken
     });
-  };
-
-    ws.current.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        console.log('Received message:', message);
-        handleMessage(message);
-      } catch (error) {
-        addMessage('error', `Failed to parse: ${event.data}`);
-        console.error('Parse error:', error);
-      }
-    };
-
-    ws.current.onerror = (error) => {
-      addMessage('error', 'WebSocket error occurred');
-      console.error('WebSocket error:', error);
-    };
 
   };
 
-  const handleMessage = (message) => {
-    console.log('Received:', message);
-
-    switch (message.type) {
-      case 'CONNECTED':
-  
-        addMessage('success', `✅ Authenticated as ${firstName} ${lastName}`);
-        break;
-
-      case 'ERROR':
-        const errorPayload = JSON.parse(message.payload || '{}');
-        addMessage('error', `❌ Error: ${errorPayload.error}`);
-        break;
-
-      case 'MESSAGE':
-        const msgPayload = JSON.parse(message.payload || '{}');
-        addMessage('message', `${msgPayload.from}: ${msgPayload.text}`);
-        break;
-
-      case 'USER_JOINED':
-        const joinPayload = JSON.parse(message.payload || '{}');
-        addMessage('info', `👋 ${joinPayload.userName} joined the meeting`);
-        break;
-
-      case 'USER_LEFT':
-        const leftPayload = JSON.parse(message.payload || '{}');
-        addMessage('info', `👋 ${leftPayload.userName} left the meeting`);
-        break;
-
-      case 'PARTICIPANT_LIST':
-        const listPayload = JSON.parse(message.payload || '{}');
-        addMessage('info', `📋 Participants: ${listPayload.participants?.length || 0}`);
-        break;
-
-      case 'MEETING_ENDED':
-        addMessage('warning', '🛑 Meeting has ended');
-        // setIsConnected(false);
-        setIsJoined(false);
-        break;
-
-      case 'PONG':
-        addMessage('system', '🏓 Pong received');
-        break;
-
-      default:
-        addMessage('system', `Received: ${message.type}`);
-    }
-  };
 
   const disconnectWebSocket = () => {
     if (ws.current) {
@@ -393,6 +311,23 @@ function WebSocketTest() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Meeting ID *
+                    </label>
+                    <input
+                      type="text"
+                      value={meetingId}
+                      onChange={(e) => setMeetingId(e.target.value)}
+                      disabled={isJoined}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-mono disabled:bg-gray-100"
+                      placeholder="abc123xyz..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Get this from your meeting URL
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Meeting Token *
                     </label>
                     <input
@@ -407,6 +342,8 @@ function WebSocketTest() {
                       Get this from your meeting URL
                     </p>
                   </div>
+
+
 
                   <button
                     onClick={joinMeeting}

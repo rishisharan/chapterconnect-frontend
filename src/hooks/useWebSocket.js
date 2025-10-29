@@ -15,9 +15,10 @@ const useWebSocket = (url = 'ws://localhost:8080/ws') => {
       return;
     }
 
-    console.log('[WS] Connecting to:', url);
+    console.log('[WS] Connecting to:', url, config, config.firstName, config.lastName);
     setConnectionConfig(config);
-    ws.current = new WebSocket(url);
+    const fullUrl = `ws://localhost:8080/ws?meetingId=${config.meetingId}&guestName=${encodeURIComponent(config.firstName+config.lastName)}`;
+    ws.current = new WebSocket(fullUrl);
 
     ws.current.onopen = () => {
       console.log('[WS] Connected successfully');
