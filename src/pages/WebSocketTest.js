@@ -105,18 +105,15 @@ function WebSocketTest() {
     ws.current = new WebSocket(wsUrlWithToken);
 
     ws.current.onopen = () => {
-    addMessage('success', 'WebSocket connected! Sending auth...');
-      
-    const authToken = getAuthToken();
-      
-    connect({
-      meetingId: meetingToken,
-      firstName,
-      lastName,
-      token: meetingToken
-    });
+      addMessage('success', 'WebSocket connected! Sending auth...');   
+      connect({
+        meetingId: meetingToken,
+        firstName,
+        lastName,
+        token: meetingToken
+      });
 
-  };
+    };
 
 
   const disconnectWebSocket = () => {
@@ -507,6 +504,7 @@ function WebSocketTest() {
       </div>
     </div>
   );
+  }
 }
 
 export default WebSocketTest;
