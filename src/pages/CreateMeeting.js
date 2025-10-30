@@ -48,7 +48,7 @@ function CreateMeeting({ user }) {
   };
 
   const copyShareLink = () => {
-    const shareUrl = `${window.location.origin}/meeting/${createdMeeting.id}`;
+    const shareUrl = `${window.location.origin}/guest-meeting/${createdMeeting.id}/${createdMeeting.token}`;
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -75,7 +75,7 @@ function CreateMeeting({ user }) {
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                value={`${window.location.origin}/meeting/${createdMeeting.token}`}
+                value={`${window.location.origin}/guest-meeting/${createdMeeting.id}/${createdMeeting.token}`}
                 readOnly
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
               />

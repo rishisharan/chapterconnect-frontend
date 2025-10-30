@@ -8,6 +8,8 @@ import ProtectedRoute from './hooks/ProtectedRoute';
 import CreateMeeting from './pages/CreateMeeting';
 import MeetingRoom from './pages/MeetingRoom';
 import WebSocketTest from './pages/WebSocketTest';
+import GuestLanding from './pages/GuestLanding';
+import GuestMeeting from './pages/GuestMeeting';
 
 function App() {
 
@@ -86,6 +88,9 @@ function App() {
         <Route path="/test/websocket" element={<WebSocketTest />} />
         <Route path="/create-meeting" element={isAuthenticated ? <CreateMeeting user={user} /> : <Navigate to="/login" />} />
         <Route path="/meeting/:id/:token" element={isAuthenticated ? <MeetingRoom user={user} /> : <Navigate to="/login" />}  />
+        <Route path="/join" element={<GuestLanding />} />
+        <Route path="/guest-meeting/:id/:token" element={<GuestLanding />} />
+        <Route path="/guest-meeting-join/:id/:token" element={<GuestMeeting />} />
       </Routes>
     </Router>
   );
