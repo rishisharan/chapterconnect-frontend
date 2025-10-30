@@ -10,6 +10,8 @@ import MeetingRoom from './pages/MeetingRoom';
 import WebSocketTest from './pages/WebSocketTest';
 import GuestLanding from './pages/GuestLanding';
 import GuestMeeting from './pages/GuestMeeting';
+import MotionDetails from './pages/MotionDetails';
+import MeetingHistory from './pages/MeetingHistory';
 
 function App() {
 
@@ -91,6 +93,8 @@ function App() {
         <Route path="/join" element={<GuestLanding />} />
         <Route path="/guest-meeting/:id/:token" element={<GuestLanding />} />
         <Route path="/guest-meeting-join/:id/:token" element={<GuestMeeting />} />
+        <Route path="/motion/:motionId" element={  isAuthenticated ? <MotionDetails /> : <Navigate to="/login" /> }  />
+        <Route path="/meeting/:meetingId/history" element={ isAuthenticated ? <MeetingHistory /> : <Navigate to="/login" /> } />
       </Routes>
     </Router>
   );
