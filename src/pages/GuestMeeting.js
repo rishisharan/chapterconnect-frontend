@@ -417,6 +417,10 @@ function GuestMeeting() {
                 <Bell className="w-5 h-5" />
                 <span className="font-medium">Toggle Notifications</span>
               </button>
+                 <button className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-left flex items-center gap-3 text-gray-700">
+                <Bell className="w-5 h-5" />
+                <span className="font-medium">Call to Order</span>
+              </button>
             </div>
             
             {/* Help Text */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Calendar, 
   Clock, 
@@ -9,11 +9,14 @@ import {
   ChevronRight,
   FileText
 } from "lucide-react";
+import CreateMotionModal from "./components/CreateMotionModal"; // Import the modal
 
 function Dashboard({ user, socket }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeView, setActiveView] = useState('home'); // 'home', 'active', 'scheduled', 'past', 'motions'
+  const [activeView, setActiveView] = useState('home');
+  const [isCreateMotionModalOpen, setIsCreateMotionModalOpen] = useState(false);
+  
   const [meetings, setMeetings] = useState({
     active: [],
     scheduled: [],
@@ -21,9 +24,16 @@ function Dashboard({ user, socket }) {
     motions: []
   });
 
+  // Restore view from navigation state
+  useEffect(() => {
+    if (location.state?.returnToView) {
+      setActiveView(location.state.returnToView);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
   // Mock data - replace with actual API calls
   useEffect(() => {
-    // TODO: Fetch meetings from backend
     setMeetings({
       active: [
         { id: 1, title: "Board Meeting", participants: 5, startTime: "10:00 AM", status: "In Progress" },
@@ -44,11 +54,7 @@ function Dashboard({ user, socket }) {
         { id: 4, title: "Approve New Hiring Policy", proposer: "Emily Davis", meetingTitle: "Team Standup", status: "Approved", votesYes: 7, votesNo: 1, votesAbstain: 0, proposedDate: "2025-10-30" }
       ]
     });
-    if (location.state?.returnToView) {
-      setActiveView(location.state.returnToView);
-      window.history.replaceState({}, document.title);
-    }
-  }, [location]);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -62,6 +68,30 @@ function Dashboard({ user, socket }) {
       localStorage.removeItem("user");
       window.location.href = "/login";
     }
+  };
+
+  const handleMotionCreated = (newMotion) => {
+    // Add the new motion to the list
+    setMeetings(prev => ({
+      ...prev,
+      motions: [
+        {
+          id: newMotion.id,
+          title: newMotion.title,
+          proposer: newMotion.proposerName,
+          meetingTitle: newMotion.meetingTitle,
+          status: newMotion.status,
+          votesYes: newMotion.votesYes,
+          votesNo: newMotion.votesNo,
+          votesAbstain: newMotion.votesAbstain,
+          proposedDate: new Date(newMotion.proposedAt).toISOString().split('T')[0]
+        },
+        ...prev.motions
+      ]
+    }));
+
+    // Switch to motions view to show the new motion
+    setActiveView('motions');
   };
 
   const menuItems = [
@@ -80,7 +110,7 @@ function Dashboard({ user, socket }) {
       case 'past':
         return <PastMeetingsTable meetings={meetings.past} navigate={navigate} />;
       case 'motions':
-        return <MotionsTable motions={meetings.motions} navigate={navigate} />;
+        return <MotionsTable motions={meetings.motions} navigate={navigate} onCreateMotion={() => setIsCreateMotionModalOpen(true)} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full">
@@ -228,14 +258,28 @@ function Dashboard({ user, socket }) {
             </h3>
             <button
               onClick={() => navigate('/create-meeting')}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
+              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2 mb-2"
             >
               <Plus className="w-5 h-5" />
               New Meeting
             </button>
+            <button
+              onClick={() => setIsCreateMotionModalOpen(true)}
+              className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <FileText className="w-5 h-5" />
+              New Motion
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Create Motion Modal */}
+      <CreateMotionModal
+        isOpen={isCreateMotionModalOpen}
+        onClose={() => setIsCreateMotionModalOpen(false)}
+        onSuccess={handleMotionCreated}
+      />
     </div>
   );
 }
@@ -437,7 +481,7 @@ function PastMeetingsTable({ meetings, navigate }) {
                   <td className="px-6 py-4 text-gray-600">{meeting.duration}</td>
                   <td className="px-6 py-4">
                     <button
-                      onClick={() => navigate(`/meeting/${meeting.id}/history`)}
+                      onClick={() => navigate(`/meeting/${meeting.id}/history`, { state: { from: 'past' } })}
                       className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors text-sm font-medium"
                     >
                       View History
@@ -454,7 +498,7 @@ function PastMeetingsTable({ meetings, navigate }) {
 }
 
 // Motions Table Component
-function MotionsTable({ motions, navigate }) {
+function MotionsTable({ motions, navigate, onCreateMotion }) {
   const getStatusBadge = (status) => {
     const statusStyles = {
       'Approved': 'bg-green-100 text-green-700',
@@ -472,12 +516,21 @@ function MotionsTable({ motions, navigate }) {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <FileText className="w-6 h-6 text-blue-600" />
-          Motions
-        </h2>
-        <p className="text-sm text-gray-600 mt-1">Track all motions across meetings</p>
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <FileText className="w-6 h-6 text-blue-600" />
+            Motions
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">Track all motions across meetings</p>
+        </div>
+        <button
+          onClick={onCreateMotion}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+        >
+          <Plus className="w-5 h-5" />
+          Create Motion
+        </button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
